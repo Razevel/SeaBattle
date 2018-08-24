@@ -447,6 +447,7 @@ function Game( name ) {
   // TODO: усложнить, чтобы он добивал корабль, если попал в него.
   var computerMove = function () {   
     var isMiss = true;
+    // Интервалы для обдумывания
     setTimeout(function () {      
       this.infobox.text('Компьютер думает');
     }.bind(this), this.compMoveTime*800);
@@ -464,27 +465,32 @@ function Game( name ) {
       
     var isValid = false, x, y;
     
+    // Поиск не чекнутых координат
     while(!isValid){
       x = getRandom(0, 10);
       y = getRandom(0, 10);
       isValid = (this.userShipMap[x][y] != 2 && this.userShipMap[x][y] != 3);
     }
-      
+    
+    // Если промазал, то чекаем что бил в эту ячейку
     if( this.userShipMap[x][y] == 0 ){
       this.userShipMap[x][y] = 2
     }
+    // Если попал, то чекаем что взорвал этот корабль
     else if(this.userShipMap[x][y] == 1){
       this.userShipMap[x][y] = 3;
       isMiss = false;
     }
+    // Проверяем, не победил ли
     checkEnd();
     
   }.bind(this);
 
 
-
+  // Проверяем, не победил ли игрок, чей сейчас ход
   var checkEnd = function() {
-
+    
+    // Поиск живых кораблей на карте
     function findShips(arr, value) {
       
       for (var i = 0; i < arr.length; i++) {
@@ -494,15 +500,15 @@ function Game( name ) {
         }
       }
       return false;
-
     }
 
-
+    // Если ход компа, то смотрим есть ли у игрока живые корабли
     if( this.whosTurn === 1 && !findShips(this.userShipMap, 1)){
 
       alert('Игра окончена!\nНа этот раз, технологии победили');
       document.location.href = "index.html";
 
+    // Если ход игрока, то смотрим есть ли у компа живые корабли
     }else if( this.whosTurn === 0 && !findShips(this.compShipMap, 1)){
       alert('Поздравляю, ' + this.userName + '! \nТы выйграл!');
       document.location.href = "index.html";
@@ -515,7 +521,7 @@ function Game( name ) {
   this.DoMove = function(x, y){
     
     var isMiss = true;
-    debugger;
+
     // Если уже стрелял
     if( this.whosTurn == 1 || this.compShipMap[x][y] == 2 || this.compShipMap[x][y] == 3 ){
       return false;
@@ -525,7 +531,7 @@ function Game( name ) {
       this.compShipMap[x][y] = 2;      
       renderField(this.compField, this.compShipMap);
 
-    // Если не пусто, показать что взорвал корабль
+    // Если не пусто, показать что взорвал корабль, оставляем ход игроку
     }else if(this.compShipMap[x][y] == 1){
       this.compShipMap[x][y] = 3;      
       renderField(this.compField, this.compShipMap);
