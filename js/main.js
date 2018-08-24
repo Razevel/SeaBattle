@@ -336,7 +336,7 @@ function Game( name ) {
   this.fieldsWrapper, // Html разметка div.row для колонок с полями
   this.userField, // Html разметка div.col для поля пользователя
   this.compField, // Html разметка div.col для поля компьютера
-  this.infobox,
+  this.infobox, // Заголовок, чей ход
   this.whosTurn; // 0 - user; 1 - comp
 
   this.compMoveTime = 1;
@@ -444,6 +444,7 @@ function Game( name ) {
   }
 
   // Ход компа (не работает)
+  // TODO: усложнить, чтобы он добивал корабль, если попал в него.
   var computerMove = function () {   
     var isMiss = true;
     setTimeout(function () {      
