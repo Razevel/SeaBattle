@@ -445,105 +445,39 @@ function Game( name ) {
 
   // Ход компа (не работает)
   var computerMove = function () {   
-    
+    var isMiss = true;
     setTimeout(function () {      
       this.infobox.text('Компьютер думает');
     }.bind(this), this.compMoveTime*800);
 
      setTimeout(function () {      
       renderField(this.userField, this.userShipMap);
-      this.whosTurn = 0;
-      this.infobox.text('Ваш ход');
-            
+      // Если попал ходит еще
+      if(isMiss){
+        this.whosTurn = 0;
+        this.infobox.text('Ваш ход');
+      }else{
+        computerMove();
+      }
     }.bind(this), this.compMoveTime*1600);
-
-
-
-    // Если комп стрельнул и убил, ему нужно добить. Пока не работает
-    if(this.lastStatus == 1){
-
-      if(!this.stop && this.last.y - 1 >= 0){
-        if( this.userShipMap[this.last.x][this.last.y-1] !== 2 && this.userShipMap[this.last.x][this.last.y-1] !== 3){
-          
-          if( this.userShipMap[this.last.x][this.last.y-1] === 0 ){
-            this.userShipMap[this.last.x][this.last.y-1] = 2;          
-            this.stop = true;            
-          }
-          else if(this.userShipMap[this.last.x][this.last.y-1] === 1 ){
-            this.userShipMap[this.last.x][this.last.y-1] = 3;
-            this.stop = true; 
-          }
-
-        }
-      }
-
-      if(!this.stop && this.last.x - 1 >= 0){
-        if( this.userShipMap[this.last.x-1][this.last.y] !== 2 && this.userShipMap[this.last.x-1][this.last.y] !== 3){
-          
-          if( this.userShipMap[this.last.x-1][this.last.y] === 0 ){
-            this.userShipMap[this.last.x-1][this.last.y] = 2;
-            this.stop = true;
-          }
-          else if(this.userShipMap[this.last.x-1][this.last.y] === 1 ){
-            this.userShipMap[this.last.x-1][this.last.y] = 3;            
-            this.stop = true;
-          }
-
-        }
-      }
-
-      if(!this.stop && this.last.y + 1 < this.yMax){
-        if( this.userShipMap[this.last.x][this.last.y+1] !== 2 && this.userShipMap[this.last.x][this.last.y+1] !== 3){
-          
-          if( this.userShipMap[this.last.x][this.last.y+1] === 0 ){
-            this.userShipMap[this.last.x][this.last.y+1] = 2;
-            this.stop = true;
-          }
-          else if(this.userShipMap[this.last.x][this.last.y+1] === 1 ){
-            this.userShipMap[this.last.x][this.last.y+1] = 3;
-            this.stop = true;
-          }
-
-        }
-      }
-
-      if(!this.stop && this.last.x + 1 < this.xMax){
-        if( this.userShipMap[this.last.x+1][this.last.y] !== 2 && this.userShipMap[this.last.x+1][this.last.y] !== 3){
-          
-          if( this.userShipMap[this.last.x+1][this.last.y] === 0 ){
-            this.userShipMap[this.last.x+1][this.last.y] = 2;
-            this.stop = true;
-          }
-          else if(this.userShipMap[this.last.x][this.last.y] === 1 ){
-            this.userShipMap[this.last.x+1][this.last.y] = 3;           
-            this.stop = true;
-          }
-
-        }
-      }
-
       
-      this.stop = false;
-      checkEnd();
-    }else{
-      
-      var isValid = false, x, y;
-      
-      while(!isValid){
-        x = getRandom(0, 10);
-        y = getRandom(0, 10);
-        isValid = (this.userShipMap[x][y] != 2 && this.userShipMap[x][y] != 3);
-      }
-
-      
-      if( this.userShipMap[x][y] == 0 ){
-        this.userShipMap[x][y] = 2
-      }
-      else if(this.userShipMap[x][y] == 1){
-        this.userShipMap[x][y] = 3;
-      }
-      checkEnd();
+    var isValid = false, x, y;
+    
+    while(!isValid){
+      x = getRandom(0, 10);
+      y = getRandom(0, 10);
+      isValid = (this.userShipMap[x][y] != 2 && this.userShipMap[x][y] != 3);
     }
+      
+    if( this.userShipMap[x][y] == 0 ){
+      this.userShipMap[x][y] = 2
+    }
+    else if(this.userShipMap[x][y] == 1){
+      this.userShipMap[x][y] = 3;
+      isMiss = false;
+    }
+    checkEnd();
+    
   }.bind(this);
 
 
@@ -579,6 +513,7 @@ function Game( name ) {
   // Публичный матод для обработки хода игрока
   this.DoMove = function(x, y){
     
+    var isMiss = true;
     debugger;
     // Если уже стрелял
     if( this.whosTurn == 1 || this.compShipMap[x][y] == 2 || this.compShipMap[x][y] == 3 ){
@@ -593,16 +528,18 @@ function Game( name ) {
     }else if(this.compShipMap[x][y] == 1){
       this.compShipMap[x][y] = 3;      
       renderField(this.compField, this.compShipMap);
+      isMiss = false;
     }
 
     checkEnd();
 
     // Смена хода
-    this.infobox.text('Ход противника');
-    this.whosTurn = 1;
+    if(isMiss){
+      this.infobox.text('Ход противника');
+      this.whosTurn = 1;
     
-    computerMove();
-
+      computerMove();
+    }
     return true;
   }
 
