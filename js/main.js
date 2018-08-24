@@ -1,3 +1,16 @@
+/*
+
+ Есть баги: 
+    из за колбеков в ходе компа, если он выйграл сначала вылетает сообщение о пройгрыше,
+  потом закрашивается последний корабль.
+
+    1 раз игра зависла кинув какое-то исключение на то что она не видит функцию. 
+    
+  
+
+*/
+
+
 // Получить рандомное целое от min(включительно) до max(не включительно)
 // Просто для сокращения
 function getRandom(min, max) {
@@ -44,9 +57,18 @@ function ShipBuilder( map ) {
     \/      max
 
   */  
-  var getBounds = function (x, y, size, side) {
+    this.getBounds = function (x, y, size, side) {
   	
+    // Границы 
     var y1, y2, x1, x2;
+    
+    /*
+  
+       Проверки, проверки, проверки. Много проверок.
+
+
+    */
+
     // Строим корабль ВЛЕВО от точки x,y на size ячеек
   	if(side == 0){
   		
@@ -243,20 +265,16 @@ function ShipBuilder( map ) {
   	};
   }.bind(this);
 
-  
 
   // Проверяет, пусты ли границы, чтобы туда вместить корабль
-  var tryBounds = function ( x1, y1, x2, y2, x, y, size, side) {
-    
+  var tryBounds = function ( x1, y1, x2, y2, x, y, size, side) { 
     // Если хоть в одной ячейке из всего прямоугольника не пусто (не 0или1),
     // то этот прямоугольник не подходит
 
     for (var i = x1; i <= x2; i++){ 
       for (var j = y1; j <= y2; j++){
-
         if( !(this.map[i][j] === 0) )
-          return false; 
-
+          return false;
       }
     }
     
@@ -276,6 +294,7 @@ function ShipBuilder( map ) {
   // Отмечает на карте корабль
   var addToMap = function ( x1, y1, x2, y2, x, y, size, side) {
     
+    // Чтобы отрисовался прижатый к стене корабль
 
     if(side == 0){
       for (var i = y; i > y-size; i--)
@@ -312,7 +331,7 @@ function ShipBuilder( map ) {
 			side = getRandom(0, 4);
 
       // Получить коры границ размещения корабля
-      var b = getBounds(x, y, size, side);
+      var b = this.getBounds(x, y, size, side);
       if(b == false)
         isValid = false;
       else        
@@ -329,17 +348,31 @@ function ShipBuilder( map ) {
 
 /* --- Логика игры --- */
 function Game( name ) {
-  
-  this.userName = name, // Имя пользователя
-  this.userShipMap, // Массив 10х10 с кораблями игрока. 0-пусто, 1-есть+живой, 2-есть+мертвый
-  this.compShipMap, // Массив 10х10 с кораблями компьютера. 0-пусто, 1-есть+живой, 2-есть+мертвый
-  this.fieldsWrapper, // Html разметка div.row для колонок с полями
-  this.userField, // Html разметка div.col для поля пользователя
-  this.compField, // Html разметка div.col для поля компьютера
-  this.infobox, // Заголовок, чей ход
-  this.whosTurn; // 0 - user; 1 - comp
 
+  // Имя пользователя
+  this.userName = name, 
+
+  // Карты кораблей. Массивы 10х10. 0-пусто, 1-есть+живой, 2-стреляли+мимо 3-стреляли+взорвали
+  this.userShipMap, 
+  this.compShipMap, 
+
+  // Html разметка 
+  this.fieldsWrapper, // div.row для колонок с полями
+  this.userField, // div.col для поля пользователя
+  this.compField, // div.col для поля компьютера
+  this.infobox, // h4, заголовок, чей ход
+
+  // Чей сейчас ход. 0 - user; 1 - comp
+  this.whosTurn; 
+
+  // Идёт ли игра
+  this.isStart = false;
+
+  // Время раздумия компьютера = +-compMoveTime*1000ms
   this.compMoveTime = 1;
+  
+
+
   // Создает двумерный массив x на y, со значениями '0', значит что ячейка свободна
   var createShipMap = function (x, y) {    
     var arr = Array(x);
@@ -381,6 +414,7 @@ function Game( name ) {
     field.css('height', field.width());
   };
 
+
   // Отрисовывает карту с кораблями
   var renderField = function (field, map, isMy) {
 
@@ -406,6 +440,7 @@ function Game( name ) {
     }
   }
 
+
   // Создает дочерний элемент указанного типа с ид и классами для родителя
   var createControll = function(parent, selector, classes, id) {
     
@@ -419,6 +454,7 @@ function Game( name ) {
 
     return newChild;
   }
+
 
   // Создает HTML разметку под поле - таблицу 10х10, добавляет заголовок чьё это поле,
   // делает поле квадратным
@@ -443,53 +479,217 @@ function Game( name ) {
     return wrapper;
   }
 
+
+  // Проверяет, не разбит ли корабль полностью,
+  // Если нет - вернет false.
+  // Если да, то вернет коры прямоугольника вокруг корабля.
+  // Вызывает ShipBuilder.GetBounds(x,y,size, side)
+  var isShipDie = function (map, x, y) {
+
+    var coors = false;
+
+    // Если корабль вертикальный
+    var _vertical = function (map, x, y) {
+      var size = 0, side = 3, x0 = x, bounds;
+      
+      while(x0>=0 && map[x0][y]==3){
+        x0--;
+      }
+      if(x0>=0 && map[x0][y] == 0) {
+        x0++;
+        var tmp = x0;
+        while(tmp<=9 && map[tmp][y]==3){
+          tmp++;
+          size++
+        }        
+        if(map[tmp][y]==0){
+          bounds = (new ShipBuilder( map )).getBounds(x0, y, size, side);
+          return bounds;
+        }
+      }
+      return false;    
+    };
+
+    // Если корабль горизонтальный
+    var _horizontal = function (map, x, y) {
+      var size = 0, side = 2, y0 = y, bounds;
+      
+      while(y0>=0 && map[x][y0]==3){
+        y0--;
+      }
+      if(y0>=0 && map[x][y0] == 0) {
+        y0++;
+        var tmp = y0;
+        while(tmp<=9 && map[x][tmp]==3){
+          tmp++;
+          size++
+        }        
+        if(map[x][tmp]==0){
+          bounds = (new ShipBuilder( map )).getBounds(x, y0, size, side);
+          return bounds;
+        }
+      }
+      return false; 
+    };
+
+    // Тут проверяется, есть ли у корабля еще палубы вертикально или горизонтально
+    // Если корабль вертикальный
+    if( (x==0 && map[x+1][y] == 3) ||
+        (x==map.length-1 && map[x-1][y] == 3) ||
+        ((x>0&&x<map.length-1) && map[x-1][y] == 3) ||
+        ((x>0&&x<map.length-1) && map[x+1][y] == 3)
+        )
+    {
+      coors = _vertical(map, x, y);
+    }
+    // Если корабль горизонтальный
+    else if((y==0 && map[x][y+1] == 3) ||
+            (y==map[0].length-1 && map[x][y-1] == 3) ||
+            ((y>0&&y<map[0].length-1) && map[x][y-1] == 3) ||
+            ((x>0&&x<map[0].length-1) && map[x][y+1] == 3)
+      )
+    {  
+        coors = _horizontal(map, x, y);
+    }
+    // Если однопалубник
+    else {
+      // Сверху
+      if(x === 0){
+        // Слева
+        if(y === 0){
+          if( (map[x+1][y] == 0 || map[x+1][y] == 2) && (map[x][y+1] == 0 || map[x][y+1] == 2)){
+            var sb = new ShipBuilder(map);
+            coors = sb.getBounds(x, y, 1, 3);
+          }
+        }
+        // Справа
+        else if(y === map[0].length-1){
+          if( (map[x][y-1] == 0 || map[x][y-1] == 2) &&  (map[x+1][y] == 0 || map[x+1][y] == 2)){
+            var sb = new ShipBuilder(map);
+            coors = sb.getBounds(x, y, 1, 3);
+          }
+        // В середине          
+        }else{
+          if( (map[x][y-1] == 0 || map[x][y-1] == 2) && (map[x][y+1] == 0 || map[x][y+1] == 2) &&  (map[x+1][y] == 0 || map[x+1][y] == 2)){
+            var sb = new ShipBuilder(map);
+            coors = sb.getBounds(x, y, 1, 3);
+          }
+        }  
+      // Снизу        
+      }else if(x === map.length-1){
+        // Слева   
+        if(y === 0){
+          if( (map[x-1][y] == 0 || map[x-1][y] == 2) && (map[x][y+1] == 0 || map[x][y+1] == 2)){
+            var sb = new ShipBuilder(map);
+            coors = sb.getBounds(x, y, 1, 3);
+          }
+
+        // Справа
+        }else if(y === map[0].length-1){
+          if( (map[x][y-1] == 0 || map[x][y-1] == 2) &&  (map[x-1][y] == 0 || map[x-1][y] == 2)){
+            var sb = new ShipBuilder(map);
+            coors = sb.getBounds(x, y, 1, 3);
+          }
+        // В середине
+        }else{
+          if( (map[x][y-1] == 0 || map[x][y-1] == 2) && (map[x][y+1] == 0 || map[x][y+1] == 2) &&  (map[x-1][y] == 0 || map[x-1][y] == 2)){
+            var sb = new ShipBuilder(map);
+            coors = sb.getBounds(x, y, 1, 3);
+          }
+        }
+      // В середине
+      }else{
+        // Слева
+        if(y === 0){
+          if( (map[x-1][y] == 0 || map[x-1][y] == 2) && (map[x+1][y] == 0 || map[x+1][y] == 2) && (map[x][y+1] == 0 || map[x][y+1] == 2)){
+            var sb = new ShipBuilder(map);
+            coors = sb.getBounds(x, y, 1, 3);
+          }
+        // Справа
+        }else if(y === map[0].length-1){
+          if( (map[x][y-1] == 0 || map[x][y-1] == 2) &&  (map[x-1][y] == 0 || map[x-1][y] == 2) &&  (map[x+1][y] == 0 || map[x+1][y] == 2)){
+            var sb = new ShipBuilder(map);
+            coors = sb.getBounds(x, y, 1, 3);
+          }
+        // В середине
+        }else{
+          if( (map[x][y-1] == 0 || map[x][y-1] == 2) && (map[x][y+1] == 0 || map[x][y+1] == 2) &&  (map[x-1][y] == 0 || map[x-1][y] == 2) && (map[x+1][y] == 0 || map[x+1][y] == 2)){
+            var sb = new ShipBuilder(map);
+            coors = sb.getBounds(x, y, 1, 3);
+          }
+        } 
+      }
+    }
+    
+
+    return coors;
+  }.bind(this);
+
+
   // Ход компа (не работает)
   // TODO: усложнить, чтобы он добивал корабль, если попал в него.
-  var computerMove = function () {   
-    var isMiss = true;
-    // Интервалы для обдумывания
-    setTimeout(function () {      
-      this.infobox.text('Компьютер думает');
-    }.bind(this), this.compMoveTime*800);
-
-     setTimeout(function () {      
-      renderField(this.userField, this.userShipMap);
-      // Если попал ходит еще
-      if(isMiss){
-        this.whosTurn = 0;
-        this.infobox.text('Ваш ход');
-      }else{
-        computerMove();
-      }
-    }.bind(this), this.compMoveTime*1600);
+  var computerMove = function () {
+    if(this.isStart && this.whosTurn == 1){  
+      var isMiss = true;
+      // Интервалы для обдумывания
+            
+      var isValid = false, x, y;
       
-    var isValid = false, x, y;
-    
-    // Поиск не чекнутых координат
-    while(!isValid){
-      x = getRandom(0, 10);
-      y = getRandom(0, 10);
-      isValid = (this.userShipMap[x][y] != 2 && this.userShipMap[x][y] != 3);
-    }
-    
-    // Если промазал, то чекаем что бил в эту ячейку
-    if( this.userShipMap[x][y] == 0 ){
-      this.userShipMap[x][y] = 2
-    }
-    // Если попал, то чекаем что взорвал этот корабль
-    else if(this.userShipMap[x][y] == 1){
-      this.userShipMap[x][y] = 3;
-      isMiss = false;
-    }
-    // Проверяем, не победил ли
-    checkEnd();
-    
+      // Поиск не чекнутых координат
+      while(!isValid){
+        x = getRandom(0, 10);
+        y = getRandom(0, 10);
+        isValid = (this.userShipMap[x][y] != 2 && this.userShipMap[x][y] != 3);
+      }
+      
+      // Если промазал, то чекаем что бил в эту ячейку
+      if( this.userShipMap[x][y] == 0 ){
+        this.userShipMap[x][y] = 2
+      }
+      // Если попал, то отмечаем что этот корабль взорван
+      else if(this.userShipMap[x][y] == 1){
+        this.userShipMap[x][y] = 3;
+        
+        // Закрашиваем его поля
+        var bounds = isShipDie(this.userShipMap, x,y);
+        if( bounds ){
+          for (var i = bounds.x1; i <= bounds.x2; i++) {
+            for (var j = bounds.y1; j <= bounds.y2; j++) {
+              if(this.userShipMap[i][j] != 3)
+                this.userShipMap[i][j] = 2;
+            }
+          }
+        }
+
+        isMiss = false;
+      }
+      
+      // Таймаут на раздумия
+      setTimeout(function () {      
+        this.infobox.text('Компьютер думает');
+      }.bind(this), this.compMoveTime*800);
+
+      setTimeout(function () {      
+        renderField(this.userField, this.userShipMap);        
+          // Если попал ходит еще
+          if(isMiss){
+            this.whosTurn = 0;
+            this.infobox.text('Ваш ход');
+          }else{
+            computerMove();
+          }
+        
+      }.bind(this), this.compMoveTime*1600);
+
+      // Проверяем, не победил ли
+      checkEnd();
+    }    
   }.bind(this);
 
 
   // Проверяем, не победил ли игрок, чей сейчас ход
   var checkEnd = function() {
-    
+
     // Поиск живых кораблей на карте
     function findShips(arr, value) {
       
@@ -504,52 +704,54 @@ function Game( name ) {
 
     // Если ход компа, то смотрим есть ли у игрока живые корабли
     if( this.whosTurn === 1 && !findShips(this.userShipMap, 1)){
-
+      this.isStart = false;
       alert('Игра окончена!\nНа этот раз, технологии победили');
       document.location.href = "index.html";
-
+    }
     // Если ход игрока, то смотрим есть ли у компа живые корабли
-    }else if( this.whosTurn === 0 && !findShips(this.compShipMap, 1)){
-      alert('Поздравляю, ' + this.userName + '! \nТы выйграл!');
+    else if( this.whosTurn === 0 && !findShips(this.compShipMap, 1)){
+      this.isStart = false;
+      alert('Поздравляю, ' + this.userName + '! \nВы выйграли!');
       document.location.href = "index.html";
     }
   }.bind(this);
 
 
-
   // Публичный матод для обработки хода игрока
   this.DoMove = function(x, y){
-    
-    var isMiss = true;
+    if( this.isStart && this.whosTurn==0 ){
+      var isMiss = true;
 
-    // Если уже стрелял
-    if( this.whosTurn == 1 || this.compShipMap[x][y] == 2 || this.compShipMap[x][y] == 3 ){
-      return false;
+      // Если уже стрелял
+      if( this.compShipMap[x][y] == 2 || this.compShipMap[x][y] == 3 ){
+        return false;
 
-    // Если пусто показать что сюда стрелял
-    }else if(this.compShipMap[x][y] == 0){
-      this.compShipMap[x][y] = 2;      
-      renderField(this.compField, this.compShipMap);
+      // Если пусто показать что сюда стрелял
+      }else if(this.compShipMap[x][y] == 0){
+        this.compShipMap[x][y] = 2;      
+        renderField(this.compField, this.compShipMap);
 
-    // Если не пусто, показать что взорвал корабль, оставляем ход игроку
-    }else if(this.compShipMap[x][y] == 1){
-      this.compShipMap[x][y] = 3;      
-      renderField(this.compField, this.compShipMap);
-      isMiss = false;
+      // Если не пусто, показать что взорвал корабль, оставляем ход игроку
+      }else if(this.compShipMap[x][y] == 1){
+        this.compShipMap[x][y] = 3;      
+        renderField(this.compField, this.compShipMap);
+        isMiss = false;
+      }
+
+      checkEnd();
+
+      // Смена хода
+      if(isMiss){
+        this.infobox.text('Ход противника');
+        this.whosTurn = 1;      
+        computerMove();
+      }
+
+      // Всё удачно, ход совершен
+      return true;
     }
-
-    checkEnd();
-
-    // Смена хода
-    if(isMiss){
-      this.infobox.text('Ход противника');
-      this.whosTurn = 1;
-    
-      computerMove();
-    }
-    return true;
+    return false;
   }
-
 
 
   /* --- Начало игры 
@@ -572,7 +774,7 @@ function Game( name ) {
     
     // Заполнение карты
     init();
-
+    this.isStart = true;
 
     // Отрисовка полей
     renderField(this.userField, this.userShipMap, true);
