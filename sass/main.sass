@@ -1,0 +1,35 @@
+$blue: #01567F
+$light: #BDEFFF
+$ship: #1C2233
+$boom: #1F0002
+
+
+*
+	box-sizing: border-box
+html
+	font-size: 15px
+
+body
+	margin: 0
+	padding: 0
+	min-width: 320px
+.fields
+	table
+		background-color: rgba($light, 0.5)
+		width: 100%
+		td
+			border: 1px solid lighten($light, 100%)
+			&:hover
+				background-color: darken($light, 10%)			
+			&.ship
+				background-color: $ship
+			&.miss
+				background-color: lighten($ship, 70%)
+			&.boom
+				background-color: darken(lighten(red, 10%), 30%)
+			
+
+				
+
+
+

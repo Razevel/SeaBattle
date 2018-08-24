@@ -1,0 +1,38 @@
+* {
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 15px;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  min-width: 320px;
+}
+
+.fields table {
+  background-color: rgba(189, 239, 255, 0.5);
+  width: 100%;
+}
+
+.fields table td {
+  border: 1px solid white;
+}
+
+.fields table td:hover {
+  background-color: #8ae3ff;
+}
+
+.fields table td.ship {
+  background-color: #1C2233;
+}
+
+.fields table td.miss {
+  background-color: #cfd5e5;
+}
+
+.fields table td.boom {
+  background-color: #990000;
+}
