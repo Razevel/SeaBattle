@@ -726,6 +726,14 @@ function Game( name ) {
       else {
         this.compShipMap[x][y] = 3;
         isMiss = false;
+
+
+        /*
+        Я не знаю, по каким правилам кто играет, но мы всегда говорили, ранил или убил. Тут так же, если убил - обвелось
+        */
+        var bounds = isShipDie(this.compShipMap, x,y);
+        if( bounds ) drawBounds(this.compShipMap, bounds);
+
       }
 
       renderField(this.compField, this.compShipMap);
