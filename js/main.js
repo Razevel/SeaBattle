@@ -32,247 +32,128 @@ function ShipBuilder( map ) {
   
   // Карта кораблей
   this.map = map;
-  
+
+  this.LEFT_ORIENTED  = 0;
+  this.TOP_ORIENTED   = 1;
+  this.RIGHT_ORIENTED = 2;
+  this.BOTTOM_ORIENTED  = 3;
 
   /*
-    Диченная функция проверки
-    
       Получает на вход координаты точки от которой строить, размер корабля 1-4 и сторону,
-    в которую строить. Возвращает координаты квадрата в котором не должно быть кораблей, 
-    если вообще корабль влезает. Если не влезает вернет false
+      в которую строить. Возвращает координаты квадрата в котором не должно быть кораблей, 
+      если вообще корабль влезает. Если не влезает вернет false
 
-    x1,y1------
-    |         |
-    |         |
-    .------x2,y2
-    
-    side:
-      0 - left    x   y--
-      1 - up      x-- y
-      2 - right   x   y++
-      3 - down    x++ y
-
-    0----y---->
-    |
-    X
-    |
-    \/      max
+      x1,y1------         0----y---->
+      |         |         |
+      |         |         |
+      .------x2,y2       \|/      max
 
   */  
-    this.getBounds = function (x, y, size, side) {
+  this.getBounds = function (x, y, size, side) {
   	
     // Границы 
     var y1, y2, x1, x2;
     
-    /*
-  
-       Проверки, проверки, проверки. Много проверок.
+    function getSubAxisBounds(subAxisCoord, subAxisMax) {
+      
+      var start, end;
+      /*
+        Если начальная ячейка корабля НА границе карты сначала ос
+      */
+      if( subAxisCoord == 0){
+        start = 0;
+        end = 1;
+      }
+      // Если начальная ячейка корабля НА границе карты снизу
+      else if(subAxisCoord == subAxisMax){
+        start = subAxisCoord-1;
+        end = subAxisCoord;
+      // Если начальная ячейка корабля НЕ на границах по вертикали
+      }else{
+        start = subAxisCoord-1;
+        end = subAxisCoord+1;
+      }
 
+      return { start, end };
+    }
 
-    */
+    function getStartOrientedBounds(axisCoord, axisMax, size) {
+      
+      var start, end;
+      
+      // Если последняя ячейка корабля ВЫХОДИТ за границы карты слева
+      if( axisCoord-size+1 < 0 ) return false;
 
-    // Строим корабль ВЛЕВО от точки x,y на size ячеек
-  	if(side == 0){
-  		
-  		// Если последняя ячейка корабля ВЫХОДИТ за границы карты слева
-  		if( (y - (size-1)) < 0 )
-  			return false;
+      // Если последняя ячейка корабля НА границе карты слева
+      if( axisCoord-size+1 == 0 ) start = 0;
+      // Если последняя ячейка корабля в другом месте карты
+      else start = axisCoord-size;
 
-  		// Если последняя ячейка корабля НА границе карты слева
-  		if( (y - (size - 1)) == 0 ){
-  			y1 = 0;
+      // Если начальная точка не на нижнем краю карты
+      if( axisCoord < axisMax ) end = axisCoord+1;
+      // Если начальная точка на нижнем краю карты (если корабль 10 ячеек)
+      else end = axisCoord;
 
-  			// Если начальная точка не на правом краю карты
-  			if(y<this.yMax)
-  				y2 = y+1;
-  			// Если начальная точка на правом краю карты (если корабль 10 ячеек)
-  			else
-  				y2 = y;
+      return { start, end };
+    } 
 
-  		// Если последняя ячейка корабля в другом месте карты
-  		}else{
-  			y1 = y-size;
-				
-				// Если начальная точка не на нижнем краю карты
-  			if(y<this.yMax)
-  				y2 = y+1;
-  			// Если начальная точка на нижнем краю карты (если корабль 10 ячеек)
-  			else
-  				y2 = y;
-  		}
+    function getEndOrientedBounds(axisCoord, axisMax, size) {
+      var start, end;
 
-  		// Если начальная ячейка корабля НА границе карты сверху
-  		if( x == 0){
-  			x1 = 0;
-  			x2 = 1;
-  		}
-  		// Если начальная ячейка корабля НА границе карты снизу
-  		else if(x == this.xMax){
-  			x1 = x-1;
-  			x2 = x;
-  		// Если начальная ячейка корабля НЕ на границах по вертикали
-  		}else{
-  			x1 = x-1;
-  			x2 = x+1;
-  		}
+      // Если последняя ячейка корабля ВЫХОДИТ за границы карты справа
+      if( axisCoord+size-1 > axisMax ) return false;
 
-  	// Строим корабль ВВЕРХ от точки x,y на size ячеек
-  	}else if(side == 1){
-  		
-  		// Если последняя ячейка корабля ВЫХОДИТ за границы карты сверху
-  		if( (x - (size-1)) < 0 )
-  			return false;
+      // Если последняя ячейка корабля НА границе карты справа
+      if( axisCoord+size-1 == axisMax ) end = axisMax;
+      // Если последняя ячейка корабля НЕ НА границе карты справа
+      else end = axisCoord + size;
 
-  		// Если последняя ячейка корабля НА границе карты сверху
-  		if( (x - (size-1)) == 0 ){
-  			x1 = 0;
-  			
-  			// Если начальная точка не на нижнем краю карты
-  			if(x < this.xMax)
-  				x2 = x+1;
-  			// Если начальная точка на нижнем краю карты
-  			else
-  				x2 = x;
-  		
-  		// Если последняя ячейка корабля НЕ на границе карты сверху
-  		}else{
-  			x1 = x - size;
+      // Если начальная точка НЕ на левой краю карты
+      if(axisCoord>0) start = axisCoord-1;
+      // Если начальная точка НА левой краю карты
+      else start = axisCoord;
 
-  			// Если начальная точка не на нижнем краю карты
-  			if(x<this.xMax)
-  				x2 = x+1;
-  			// Если начальная точка на нижнем краю карты
-  			else
-  				x2 = x;
-  		}
+      return { start, end };
+    } 
 
-  		// Если начальная ячейка корабля НА границе карты слева
-  		if( y == 0){
-  			y1 = 0;
-  			y2 = 1;
-  		}
-  		// Если начальная ячейка корабля НА границе карты справа  		
-  		else if(y == this.yMax){
-  			y1 = y-1;
-  			y2 = y;
-  		// Если начальная ячейка корабля не на границах карты по горизонтали
-  		}else{
-  			y1 = y-1;
-  			y2 = y+1;
-  		}
+    if( side == this.LEFT_ORIENTED || side == this.RIGHT_ORIENTED ){
+      
+      if( side == this.LEFT_ORIENTED )
+        var mainBounds = getStartOrientedBounds(y, this.yMax, size);
+      else
+        var mainBounds = getEndOrientedBounds(y, this.yMax, size);
+      
+      if( !mainBounds ) return false;
+      y1 = mainBounds.start;
+      y2 = mainBounds.end;
 
-  	// Строим корабль ВПРАВО от точки x,y на size ячеек
-  	}else if(side == 2){
-  		// Если последняя ячейка корабля ВЫХОДИТ за границы карты справа
-  		if( (y + (size-1)) > 9 )
-  			return false;
+      var sb = getSubAxisBounds(x, this.xMax);
+      x1 = sb.start;
+      x2 = sb.end;
 
-  		// Если последняя ячейка корабля НА границе карты справа
-  		if( (y + (size-1)) == 9 ){
-  			y2 = (y + size);
+    }else if( side == this.TOP_ORIENTED || side == this.BOTTOM_ORIENTED ){
 
-  			// Если начальная точка НЕ на левой краю карты
-  			if(y>0)
-  				y1 = y-1;
-  			// Если начальная точка НА левой краю карты
-  			else
-  				y1 = y;
-  		// Если последняя ячейка корабля НЕ НА границе карты справа
-  		}else{
-  			y2 = y + size;
+      if( side == this.TOP_ORIENTED )
+        var mainBounds = getStartOrientedBounds(x, this.xMax, size);
+      else
+        var mainBounds = getEndOrientedBounds(x, this.xMax, size);
 
-  			// Если начальная точка НЕ на левой краю карты
-  			if(y>0)
-  				y1 = y-1;
-  			// Если начальная точка НА левой краю карты
-  			else
-  				y1 = y;
-  		}
+      if( !mainBounds ) return false;
+      x1 = mainBounds.start;
+      x2 = mainBounds.end;
 
-  		// Если начальная ячейка корабля НА границе карты сверху
-  		if( x == 0){
-  			x1 = 0;
-  			x2 = 1;
-  		}  		
-			// Если начальная ячейка корабля НА границе карты снизу
-  		else if(x == this.xMax){
-  			x1 = x-1;
-  			x2 = x;
-  		// Если начальная ячейка корабля НЕ на границах по вертикали
-  		}else{
-  			x1 = x-1;
-  			x2 = x+1;
-  		}
+      var sb = getSubAxisBounds(y, this.yMax);
+      y1 = sb.start;
+      y2 = sb.end;
 
-  	// Строим корабль ВНИЗ от точки x,y на size ячеек  	
-  	}else if(side == 3){
-  		
-  		// Если последняя ячейка корабля ВЫХОДИТ за границы карты снизу
-  		if( (x + (size-1)) > this.xMax )
-  			return false;
-
-  		// Если последняя ячейка корабля НА границе карты снизу
-  		if( (x + (size-1)) == this.xMax ){
-  			x2 = this.xMax;
-  			
-  			// Если начальная точка не на верхнем краю карты
-  			if(x>0)
-  				x1 = x-1;
-				
-        // Если начальная точка на верхнем краю карты
-  			else
-  				x1 = x;
-
-  		// Если последняя ячейка корабля НЕ на границе карты снизу  		
-  		}else{
-  			x2 = x + size;
-
-  			// Если начальная точка не на верхнем краю карты  			
-  			if(x>0)
-  				x1 = x-1;
-				
-        // Если начальная точка на верхнем краю карты  			
-  			else
-  				x1 = x;
-  		}
-
-  		// Если начальная ячейка корабля НА границе карты слева
-  		if( y == 0){
-  			y1 = 0;
-  			y2 = 1;
-  		}
-  		// Если начальная ячейка корабля НА границе карты справа
-  		else if(y == this.yMax){
-  			y1 = y-1;
-  			y2 = y;
-  		// Если начальная ячейка корабля не на границах карты по горизонтали 
-  		}else{
-  			y1 = y-1;
-  			y2 = y+1;
-  		}
-
-  	}else {
-  		throw 'Argument(side) exception. side must be int in range from 0 to 3';
-  	}
-    
-  	return {
-  		x1: x1,
-      y1: y1,
-      y2: y2,
-  		x2: x2,
-      x: x,
-      y: y,
-      size: size,
-      side: side
-  	};
-  }.bind(this);
-
+  	}else	throw 'Argument(side) exception. side must be int in range from 0 to 3';
+    return { x1, y1, x2, y2, x, y, size, side };
+  };
 
   // Проверяет, пусты ли границы, чтобы туда вместить корабль
-  var tryBounds = function ( x1, y1, x2, y2, x, y, size, side) { 
+  var tryBounds = function ( x1, y1, x2, y2, x, y, size, side ) { 
     // Если хоть в одной ячейке из всего прямоугольника не пусто (не 0или1),
     // то этот прямоугольник не подходит
-
     for (var i = x1; i <= x2; i++){ 
       for (var j = y1; j <= y2; j++){
         if( !(this.map[i][j] === 0) )
@@ -280,42 +161,30 @@ function ShipBuilder( map ) {
       }
     }
     
-    return {
-      x1: x1,
-      y1: y1,
-      y2: y2,
-      x2: x2,
-      x: x,
-      y: y,
-      size: size,
-      side: side
-    };
+    return { x1, y1, x2, y2, x, y, size, side };
   }.bind(this);
-
 
   // Отмечает на карте корабль
   var addToMap = function ( x1, y1, x2, y2, x, y, size, side) {
-    
     // Чтобы отрисовался прижатый к стене корабль
-
-    if(side == 0){
-      for (var i = y; i > y-size; i--)
+    if(side == this.LEFT_ORIENTED){
+      for (var i = y-size+1; i <= y; i++)
         this.map[x][i] = 1;
 
-    }else if( side == 1){
-      for (var i = x; i > x-size; i--)
+    }else if( side == this.TOP_ORIENTED){
+      for (var i = x-size+1; i <= x; i++)
         this.map[i][y] = 1;
 
-    }else if( side == 2){
+    }else if( side == this.RIGHT_ORIENTED){
       for (var i = y; i < y+size; i++)
         this.map[x][i] = 1;
 
-    }else if( side == 3){
+    }else if( side == this.BOTTOM_ORIENTED){
       for (var i = x; i < x+size; i++)
         this.map[i][y] = 1;
     }
-  }.bind(this);
 
+  }.bind(this);
 
   // Публичный метод для рандомного размещения корабля размера size
 	this.placeShip = function (size) {
@@ -326,18 +195,16 @@ function ShipBuilder( map ) {
 	  		isValid = false; // Можно ли так разместить корабль
 	  
     // Пока место не подходит для размещения, выбирать новое
-		while(!isValid){
+		while( !isValid ){
 			x = getRandom(0, 10);
 			y = getRandom(0, 10);
-      // В какую сторону строить
-			side = getRandom(0, 4);
+      
+      // В какую сторону строить(по часовой от лева до низа (0,1,2,3))
+			side = getRandom(this.LEFT_ORIENTED, this.BOTTOM_ORIENTED);
 
       // Получить коры границ размещения корабля
       var b = this.getBounds(x, y, size, side);
-      if(b == false)
-        isValid = false;
-      else        
-        // Смотрим, есть ли там уже корабли
+      if( b )
 			  isValid = tryBounds(b.x1, b.y1, b.x2, b.y2, b.x, b.y, b.size, b.side);
 		}
     b = isValid;
@@ -387,27 +254,25 @@ function Game( name ) {
     return arr;
   }
 
-  // Создание карты кораблей для 2х игроков и расстановка кораблей
+  // Создание карты кораблей для 2х игроков и расстановку кораблей
   var init = function () {
     
     this.userShipMap = createShipMap(10, 10);
+    this.compShipMap = createShipMap(10, 10);
+
     var userSB = new ShipBuilder(this.userShipMap);
+    var compSB = new ShipBuilder(this.compShipMap);
+
     for (var i = 0; i < 4; i++) {
       for (var j = 4-i; j > 0; j--) {
         userSB.placeShip(j);
-      }
-    }
-
-    this.compShipMap = createShipMap(10, 10);
-    var compSB = new ShipBuilder(this.compShipMap);
-    for (var i = 0; i < 4; i++) {
-      for (var j = 4-i; j > 0; j--) {
         compSB.placeShip(j);
       }
     }
+
   }.bind(this);
 
-  // делает поле квадратным  
+  // Делает HTML-поле квадратным  
   var adaptField = function (field) {
     field = field.find('table');
     field.css('height', field.width());
@@ -502,16 +367,16 @@ function Game( name ) {
     }
   }
 
+  // !!! МНОГО УПРОСТИТЬ НУЖНО !!!
   // Проверяет, не разбит ли корабль полностью,
   // Если нет - вернет false.
   // Если да, то вернет коры прямоугольника вокруг корабля.
   // Вызывает ShipBuilder.GetBounds(x,y,size, side)
   var isShipDie = function (map, x, y) {
-         debugger
     var coors = false;
 
     // Если корабль вертикальный
-    var _vertical = function (map, x, y) {
+    function _vertical(map, x, y) {
       var size = 0, side = 3, x0 = x, bounds;
       
       while(x0>=0 && map[x0][y]==3){
@@ -536,7 +401,7 @@ function Game( name ) {
     };
 
     // Если корабль горизонтальный
-    var _horizontal = function (map, x, y) {
+    function _horizontal (map, x, y) {
       var size = 0, side = 2, y0 = y, bounds;
       
       while(y0>=0 && map[x][y0]==3){
@@ -655,8 +520,50 @@ function Game( name ) {
   }.bind(this);
 
 
+
   // Ход компа
   // TODO: усложнить, чтобы он добивал корабль, если попал в него.
+  /*
+
+
+  быстрый вар 
+
+  когда попал запомнить, 
+  заполнить массив значениями на 3 клетки от попадания в разные стороны, где не били и пусто.
+    points = {
+      left: [];
+      right: [];
+      top: [];
+      bot: [];
+    }
+  если стреляем второй раз и попадаем, то удаляем массивы не той ориентации (верт или гориз)
+
+  это вар для норм логики
+
+
+
+    Ключи 
+      мимо = 1
+      попал = 2
+      первый раз = 4
+      не первый раз = 8 
+      есть недобитый = 
+      убил = 16
+
+
+
+    Добивание.
+    1) Запомнить что было в прошлом ходу 0 - попал, 1 - убил, 2 - всё остальное
+    2) Запомнить коры первого попадания и коры последнего, если попал
+    3) Понять горизонтальный или вертикальный корабль.
+    4) Долбануть в следущуюю ячейку. 
+      Если попал и не убил - долбить пока не промажет или не убил или не конец/начало карты
+      Если промазал, а до этого ранил или конец карты - начать бить в противоположную сторону от первого попадания. 
+      Если попал и убил - поставить статус как промазал
+
+
+  */
+
   var computerMove = function () {
     if(this.isStart && this.whosTurn == 1){  
       this.infobox.text('Ход противника');
@@ -687,9 +594,10 @@ function Game( name ) {
           if( bounds ) drawBounds(this.userShipMap, bounds);          
         }
 
-        setTimeout(function () {      
-          renderField(this.userField, this.userShipMap, true);
-        }.bind(this), this.compMoveTime*1400);        
+        setTimeout(
+          function () { renderField(this.userField, this.userShipMap, true) }.bind(this), 
+          this.compMoveTime*1400
+        );        
 
         setTimeout(function () {      
             // Если больше нет живых кораблей - выйграл
@@ -712,28 +620,21 @@ function Game( name ) {
     }    
   }.bind(this);
 
-
   // Публичный матод для обработки хода игрока
   this.DoMove = function(x, y){
+    // Если идет игра, ход игрока и в клетку стреляют впервые
     if( this.isStart && this.whosTurn == 0 && this.compShipMap[x][y] != 2 && this.compShipMap[x][y] != 3){
       this.infobox.text('Ваш ход');
       var isMiss = true;
 
       // Если пусто показать что сюда стрелял
-      if(this.compShipMap[x][y] == 0) 
-        this.compShipMap[x][y] = 2;  
+      if(this.compShipMap[x][y] == 0) this.compShipMap[x][y] = 2;  
       // Если не пусто, показать что взорвал корабль, оставляем ход игроку
       else {
         this.compShipMap[x][y] = 3;
         isMiss = false;
-
-
-        /*
-        Я не знаю, по каким правилам кто играет, но мы всегда говорили, ранил или убил. Тут так же, если убил - обвелось
-        */
         var bounds = isShipDie(this.compShipMap, x,y);
         if( bounds ) drawBounds(this.compShipMap, bounds);
-
       }
 
       renderField(this.compField, this.compShipMap);
@@ -751,8 +652,6 @@ function Game( name ) {
         alert('Поздравляю, ' + this.userName + '! \nВы выйграли!');
       }
 
-      // Всё удачно, ход совершен
-          
     }else if(!this.isStart){
       if(confirm('Игра окончена!\nНачать новую?')) location.reload();
     }else if(this.whosTurn == 1){
@@ -774,12 +673,12 @@ function Game( name ) {
     var div = createControll(createControll($('main'), 'div', 'row'), 'div', 'col-12 col-md-6 mb-7');
     this.infobox = createControll(div, 'h4', '');
 
-    // бутстрап сетка для нормального отображения полей на разных устройствах 
+    // Бутстрап сетка для нормального отображения полей на разных устройствах 
     this.fieldsWrapper = createControll($('main'), 'div', 'row justify-content-around fields mb-2');
     
     // HTML разметка для полей
-    this.userField = createField(this.fieldsWrapper, 'div', 'col-12 col-md-6 mt-3 md-5', 'userField', 'Ваше поле');
     this.compField = createField(this.fieldsWrapper, 'div', 'col-12 col-md-6 mt-3 md-5', 'compField', 'Поле компьютера');
+    this.userField = createField(this.fieldsWrapper, 'div', 'col-12 col-md-6 mt-3 md-5', 'userField', 'Ваше поле');
     
     // Заполнение карты
     init();
@@ -789,19 +688,13 @@ function Game( name ) {
     renderField(this.userField, this.userShipMap, true);
     renderField(this.compField, this.compShipMap, false);    
 
-
     // Выбор хода
     this.whosTurn = getRandom(0, 2);
     
     if (this.whosTurn == 0) this.infobox.text('Ваш ход');
     else computerMove();
-    
   }
 }
-
-
-
-
 
 // Загрузка, экранчики меняются, ни на что не влияет
 function load() {
@@ -841,12 +734,6 @@ function load() {
 }
 
 
-
-
-
-
-
-
 // doc.ready
 $(function(){
 
@@ -876,6 +763,9 @@ $(function(){
           game.DoMove(rowIndex, colIndex);
         });
 
+        game.compMoveTime = 0;
+        $('#compMoveTime').removeClass('active');
+
         $('#compMoveTime').on('click', function() {
           if(game.compMoveTime === 1){            
             game.compMoveTime = 0;
@@ -895,4 +785,3 @@ $(function(){
 
 
 });
-
