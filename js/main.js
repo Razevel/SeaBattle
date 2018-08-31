@@ -763,9 +763,6 @@ $(function(){
           game.DoMove(rowIndex, colIndex);
         });
 
-        game.compMoveTime = 0;
-        $('#compMoveTime').removeClass('active');
-
         $('#compMoveTime').on('click', function() {
           if(game.compMoveTime === 1){            
             game.compMoveTime = 0;
